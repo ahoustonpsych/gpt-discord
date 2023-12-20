@@ -3,6 +3,8 @@ const config = require('./config');
 const handleCommand = require('./utils/handleCommand');
 const gptReplyHandler = require('./gptReplyHandler'); // Import the reply handler
 
+console.log(config);
+
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
