@@ -1,6 +1,5 @@
 const openaiClient = require('../clients/openaiClient');
 const crypto = require('crypto');
-const { conversations } = require('../commands/gpt');
 
 const MAX_EXCHANGES = 5;
 
@@ -8,7 +7,7 @@ async function sendTemporaryMessage(channel, content) {
     return await channel.send(content);
 }
 
-async function getGptResponse({ model, messages }) {
+async function getGptResponse(model, messages) {
     const gptResponse = await openaiClient.chat.completions.create({
         model: model,
         messages: messages
@@ -19,13 +18,6 @@ async function getGptResponse({ model, messages }) {
     } else {
         throw new Error('Invalid GPT response structure');
     }
-}
-
-function getOrCreateConversation(conversations, userId) {
-    if (!conversations[userId]) {
-        conversations[userId] = { id: generateBase64Id(), history: [] };
-    }
-    return conversations[userId];
 }
 
 function updateConversationHistory(conversation, role, content) {
@@ -63,7 +55,7 @@ function generateBase64Id() {
 module.exports = {
     sendTemporaryMessage,
     getGptResponse,
-    getOrCreateConversation,
+    // Removed getOrCreateConversation from exports
     updateConversationHistory,
     formatConversationForGpt,
     updateAndLogConversation,

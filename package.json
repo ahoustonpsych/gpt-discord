@@ -10,9 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^7.7.0",
     "crypto": "^1.0.1",
     "discord.js": "^14.14.1",
     "file-type": "^18.7.0",
+    "node-fetch": "^3.3.2",
     "openai": "^4.20.1"
   }
 }

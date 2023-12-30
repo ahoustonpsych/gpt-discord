@@ -11,6 +11,7 @@ function handleCommand(command, message, args) {
             dalleHandler(message, args);
             break;
         case 'gpt':
+            console.log('gpt command received')
             gptHandler(message, args);
             break;
         case 'gptvoice':
