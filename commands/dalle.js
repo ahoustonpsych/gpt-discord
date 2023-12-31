@@ -1,25 +1,33 @@
 const openaiClient = require('../clients/openaiClient');
-const { Storage } = require('@google-cloud/storage');
 const { handleErrors, sendTemporaryMessage } = require('../utils/botUtils');
 const https = require('https');
-const { promisify } = require('util');
-const stream = require('stream');
-const pipeline = promisify(stream.pipeline);
-
-// Initialize Google Cloud Storage client
-const storage = new Storage();
-const bucketName = 'ahouston-dalle';
+const fs = require('fs');
+const path = require('path');
+const { AttachmentBuilder } = require('discord.js');
 
 async function dalleHandler(message, args) {
+    let tempMessage;
     try {
         const { promptText, size, n, quality } = parseArgs(args);
-        const tempMessageText = `Image count set to ${n}. Size set to ${size}.`;
-        await sendTemporaryMessage(message.channel, `Processing your request... ${tempMessageText}`);
+        const tempMessageText = `Processing your request...`;
+        tempMessage = await sendTemporaryMessage(message.channel, tempMessageText);
 
-        const publicImageUrl = await generateAndUploadImage(promptText, n, size, quality);
-        await message.reply({ content: `Here is your generated image: ${publicImageUrl}` });
+        const localImagePath = await generateImage(promptText, n, size, quality);
+        const attachment = new AttachmentBuilder(localImagePath).setName('dalle-image.png');
+        await message.reply({ files: [attachment] });
+
+        // Clean up the local image file
+        fs.unlinkSync(localImagePath);
+
+        // Delete the temporary message
+        if (tempMessage) {
+            await tempMessage.delete();
+        }
     } catch (error) {
         handleErrors(message, error);
+        if (tempMessage) {
+            await tempMessage.delete();
+        }
     }
 }
 
@@ -44,7 +52,7 @@ function parseArgs(args) {
     return { promptText, size, n, quality };
 }
 
-async function generateAndUploadImage(promptText, n, size, quality) {
+async function generateImage(promptText, n, size, quality) {
     const response = await openaiClient.images.generate({
         model: "dall-e-3",
         prompt: promptText,
@@ -54,24 +62,19 @@ async function generateAndUploadImage(promptText, n, size, quality) {
     });
 
     const imageUrl = response.data[0].url;
-    const fileName = `dalle-generated-${Date.now()}.png`;
-
-    const file = storage.bucket(bucketName).file(fileName);
-    const fileWriteStream = file.createWriteStream({
-        metadata: {
-            contentType: 'image/png',
-        },
-    });
+    const localFileName = `dalle-generated-${Date.now()}.png`;
+    const localFilePath = path.resolve(__dirname, '..', 'temp', localFileName);
 
     await new Promise((resolve, reject) => {
         https.get(imageUrl, (response) => {
-            response.pipe(fileWriteStream)
-                .on('error', reject)
-                .on('finish', resolve);
+            const fileStream = fs.createWriteStream(localFilePath);
+            response.pipe(fileStream)
+                .on('finish', resolve)
+                .on('error', reject);
         }).on('error', reject);
     });
 
-    return `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    return localFilePath;
 }
 
 module.exports = dalleHandler;
